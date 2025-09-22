@@ -21,7 +21,7 @@ class Oscar < Formula
     # Собираем в отдельном каталоге
     mkdir "build" do
       # Явно используем qmake из qt@5, чтобы избежать коллизий с системным qmake
-      system Formula["qt@5"].opt_bin/"qmake", "../OSCAR.pro",
+      system Formula["qt@5"].opt_bin/"qmake", "../OSCAR_QT.pro",
              "CONFIG+=release",
              "PREFIX=#{prefix}"
 
