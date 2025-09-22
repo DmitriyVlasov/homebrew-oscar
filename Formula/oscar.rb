@@ -22,27 +22,27 @@ class Oscar < Formula
   end
 
   def install
-    # гарантируем qmake из qt@5
+    # qmake именно из qt@5
     ENV.prepend_path "PATH", Formula["qt@5"].opt_bin
 
-    # корневой qmake-проект (subdirs) собирает подкаталог oscar/
+    # qmake ожидает англоязычный вывод компилятора
+    ENV["LANG"] = "C"
+    ENV["LC_ALL"] = "C"
+
+    # Собираем корневой subdirs-проект
     system "qmake", "OSCAR_QT.pro", "CONFIG+=release"
     system "make", "-j#{ENV.make_jobs}"
 
-    # бинарник может оказаться в oscar/OSCAR или oscar/release/OSCAR
+    # Где может лежать бинарь
     exe = if File.exist?("oscar/OSCAR")
       "oscar/OSCAR"
     elsif File.exist?("oscar/release/OSCAR")
       "oscar/release/OSCAR"
     else
-      # запасной вариант — вдруг проект изменит структуру
       "OSCAR"
     end
 
     bin.install exe
-
-    # ресурсы не обязательны для запуска; при желании можно раскомментировать:
-    # (pkgshare/"oscar").install Dir["oscar/Help/*", "oscar/Html/*", "oscar/Translations/*"] rescue nil
   end
 
   test do
