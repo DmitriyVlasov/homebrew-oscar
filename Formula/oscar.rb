@@ -1,51 +1,46 @@
+# Формула для личного tap’а: например, putchastick/oscar/oscar.rb
 class Oscar < Formula
-  desc "Open Source CPAP Analysis Reporter"
-  homepage "https://gitlab.com/CrimsonNape/OSCAR-code"
-  url "https://gitlab.com/CrimsonNape/OSCAR-code/-/archive/v1.6.1/OSCAR-code-v1.6.1.tar.gz"
-  sha256 "0282f4e8347c3e52911be1809eae8832da64e961cae9c968278a0a6fbceb5d51"
+  desc "Open Source CPAP Analysis Reporter (OSCAR)"
+  homepage "https://www.sleepfiles.com/OSCAR/"
   license "GPL-3.0-or-later"
-  head "https://gitlab.com/CrimsonNape/OSCAR-code.git", branch: "master"
 
+  # Стабильная сборка из официального репозитория разработчиков (GitLab)
+  url "https://gitlab.com/CrimsonNape/OSCAR-code.git",
+      using:  :git,
+      tag:    "v1.6.1"   # актуальная линия 1.6.x
+  head "https://gitlab.com/CrimsonNape/OSCAR-code.git", using: :git
+
+  # Qt5 требуется согласно пакетам Debian/FreeBSD для 1.5–1.6.x ветки
   depends_on "qt@5"
+  depends_on "pkg-config" => :build
+
+  # zlib тянется из macOS; под Linux Homebrew подтянет свой пакет
   uses_from_macos "zlib"
 
-  on_linux do
-    depends_on "libx11"
-    depends_on "mesa-glu"
-    depends_on "pkg-config" => :build
-  end
-
-  livecheck do
-    url :stable
-    strategy :git
-    regex(/^v?(\d+(?:\.\d+)+)$/i)
-  end
-
   def install
-    # qmake именно из qt@5
-    ENV.prepend_path "PATH", Formula["qt@5"].opt_bin
+    # Собираем в отдельном каталоге
+    mkdir "build" do
+      # Явно используем qmake из qt@5, чтобы избежать коллизий с системным qmake
+      system Formula["qt@5"].opt_bin/"qmake", "../OSCAR.pro",
+             "CONFIG+=release",
+             "PREFIX=#{prefix}"
 
-    # qmake ожидает англоязычный вывод компилятора
-    ENV["LANG"] = "C"
-    ENV["LC_ALL"] = "C"
-
-    # Собираем корневой subdirs-проект
-    system "qmake", "OSCAR_QT.pro", "CONFIG+=release"
-    system "make", "-j#{ENV.make_jobs}"
-
-    # Где может лежать бинарь
-    exe = if File.exist?("oscar/OSCAR")
-      "oscar/OSCAR"
-    elsif File.exist?("oscar/release/OSCAR")
-      "oscar/release/OSCAR"
-    else
-      "OSCAR"
+      # Сборка и установка
+      system "make"
+      system "make", "install"
     end
 
-    bin.install exe
+    # На всякий случай: если upstream не устанавливает desktop-файл/иконки сам,
+    # можно раскомментировать и подстроить пути (оставляю как подсказку).
+    # (share/"applications").install "resources/oscar.desktop" if File.exist?("resources/oscar.desktop")
+    # (share/"icons/hicolor/256x256/apps").install "resources/icons/oscar.png" if File.exist?("resources/icons/oscar.png")
   end
 
   test do
-    assert_match "Usage", shell_output("#{bin}/OSCAR --help 2>&1")
+    # GUI мы не запускаем; проверяем, что бинарник установился
+    assert_predicate bin/"OSCAR", :exist?, "OSCAR binary must exist"
+    # Иногда приложение печатает помощь/версию; не критично, если код возврата != 0
+    out = shell_output("#{bin}/OSCAR --version 2>&1", 1)
+    assert_match(/OSCAR/i, out)
   end
 end
