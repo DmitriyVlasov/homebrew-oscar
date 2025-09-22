@@ -6,14 +6,13 @@ class Oscar < Formula
   license "GPL-3.0-or-later"
   head "https://gitlab.com/CrimsonNape/OSCAR-code.git", branch: "master"
 
-  # Qt5 включает qmake, qcollectiongenerator, lrelease и т.п.
   depends_on "qt@5"
   uses_from_macos "zlib"
 
-  # oscar.pro на Linux явно линкует -lX11 и -lGLU
   on_linux do
     depends_on "libx11"
-    depends_on "glu"
+    depends_on "mesa-glu"
+    depends_on "pkg-config" => :build
   end
 
   livecheck do
@@ -26,20 +25,27 @@ class Oscar < Formula
     # гарантируем qmake из qt@5
     ENV.prepend_path "PATH", Formula["qt@5"].opt_bin
 
-    # корневой qmake-проект (subdirs) -> соберёт подкаталог oscar/
+    # корневой qmake-проект (subdirs) собирает подкаталог oscar/
     system "qmake", "OSCAR_QT.pro", "CONFIG+=release"
     system "make", "-j#{ENV.make_jobs}"
 
-    # итоговый бинарник лежит в подкаталоге oscar/
-    bin.install "oscar/OSCAR"
+    # бинарник может оказаться в oscar/OSCAR или oscar/release/OSCAR
+    exe = if File.exist?("oscar/OSCAR")
+      "oscar/OSCAR"
+    elsif File.exist?("oscar/release/OSCAR")
+      "oscar/release/OSCAR"
+    else
+      # запасной вариант — вдруг проект изменит структуру
+      "OSCAR"
+    end
 
-    # опционально: можно установить сгенерированные справку/переводы,
-    # но приложение умеет работать и с вшитыми ресурсами.
+    bin.install exe
+
+    # ресурсы не обязательны для запуска; при желании можно раскомментировать:
     # (pkgshare/"oscar").install Dir["oscar/Help/*", "oscar/Html/*", "oscar/Translations/*"] rescue nil
   end
 
   test do
-    # help отдаёт текст и не запускает GUI
     assert_match "Usage", shell_output("#{bin}/OSCAR --help 2>&1")
   end
 end
