@@ -11,12 +11,19 @@ class Oscar < Formula
   depends_on "libzip"
   depends_on "zlib"
 
-  def install
-    mkdir "build" do
-      system "cmake", "..", *std_cmake_args
-      system "make", "install"
-    end
-  end
+def install
+  # убедимся, что qmake виден
+  ENV.prepend_path "PATH", Formula["qt@5"].opt_bin
+
+  # Генерим Makefile и собираем
+  system "qmake", "-config", "release"
+  system "make"
+
+  bin.install "OSCAR"
+
+  (share/"oscar").install Dir["icons/*"] rescue nil
+end
+
 
   test do
     system "#{bin}/OSCAR", "--version"
